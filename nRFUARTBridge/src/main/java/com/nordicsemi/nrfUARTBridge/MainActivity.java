@@ -157,7 +157,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
     class ServerThread implements Runnable {
 
         public void run() {
-            Socket socket;
+            Socket clientSocket = null;
             Thread clientThread = null;
             try {
                 serverSocket = new ServerSocket(SERVERPORT);
@@ -166,9 +166,9 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             }
             while (!Thread.currentThread().isInterrupted()) {
                 try {
-                    socket = serverSocket.accept();
+                    Socket socket = serverSocket.accept();
 
-                    if (clientThread != null) {
+                    if ((clientThread != null) && clientThread.isAlive()) {
                         clientThread.interrupt();
                         try {
                             clientThread.join(500);
@@ -176,24 +176,47 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                         }
                     }
 
+                    if (clientSocket != null) {
+                        try {
+                            clientSocket.close();
+                        } catch (IOException e) {
+                            // ignore
+                        }
+                    }
+
+                    clientSocket = socket;
+
                     SocketToBleThread commThread = new SocketToBleThread(socket);
                     clientThread = new Thread(commThread);
                     clientThread.start();
-                } catch (IOException e) {
-                    //e.printStackTrace();
+                } catch (IOException e) { //local close at exit
                     break;
+                }
+            }
+            //cleanup at Stop
+            if ((clientThread != null) && clientThread.isAlive()) {
+                clientThread.interrupt();
+                try {
+                    clientThread.join(500);
+                } catch (InterruptedException e) {//don't care
+                }
+            }
+
+            if (clientSocket != null) {
+                try {
+                    clientSocket.close();
+                } catch (IOException e) {
+                    // ignore
                 }
             }
         }
     }
 
     class SocketToBleThread implements Runnable {
-        private Socket clientSocket;
         private InputStream input;
         private byte[] buffer = new byte[BUFSIZE];
 
         public SocketToBleThread(Socket clientSocket) {
-            this.clientSocket = clientSocket;
             try {
                 this.input = clientSocket.getInputStream();
                 socketOutput = clientSocket.getOutputStream();
@@ -214,6 +237,9 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             while (!Thread.currentThread().isInterrupted()) {
                 try {
                     int num_bytes = input.read(buffer);
+                    if (num_bytes<0) { //remote disconnect
+                        break;
+                    }
                     if ((num_bytes > 0) && (uartConnected)){
                         runOnUiThread(new Runnable() {
                             public void run() {
@@ -224,9 +250,8 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
 
                         mService.writeRXCharacteristic(buffer);
                     }
-                } catch (IOException e) {
-                    socketConnected = false;
-                    //e.printStackTrace();
+                } catch (IOException e) { //remote disconnect
+                    break;
                 }
             }
             socketConnected = false;

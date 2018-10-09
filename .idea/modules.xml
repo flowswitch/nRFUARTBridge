@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/Android-nRF-UART-Bridge.iml" filepath="$PROJECT_DIR$/Android-nRF-UART-Bridge.iml" />
-      <module fileurl="file://$PROJECT_DIR$/nRFUARTBridge/nRFUARTBridge.iml" filepath="$PROJECT_DIR$/nRFUARTBridge/nRFUARTBridge.iml" />
+      <module fileurl="file://$PROJECT_DIR$/nRFUARTBridge.iml" filepath="$PROJECT_DIR$/nRFUARTBridge.iml" />
+      <module fileurl="file://$PROJECT_DIR$/nRFUARTBridge/nRFUARTBridge-nRFUARTBridge.iml" filepath="$PROJECT_DIR$/nRFUARTBridge/nRFUARTBridge-nRFUARTBridge.iml" />
     </modules>
   </component>
 </project>
