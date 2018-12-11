@@ -92,7 +92,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
     private ServerSocket serverSocket;
     Thread serverThread = null;
     private static final int SERVERPORT = 6000;
-    private static final int BUFSIZE = 16;
+    private static final int BUFSIZE = 20;
     private boolean socketConnected = false;
     private OutputStream socketOutput = null;
 
@@ -241,13 +241,14 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                         break;
                     }
                     if ((num_bytes > 0) && (uartConnected)){
+                        /*
                         runOnUiThread(new Runnable() {
                             public void run() {
                                 listAdapter.add("TCP->BLE");
                                 messageListView.smoothScrollToPosition(listAdapter.getCount() - 1);
                             }
                         });
-
+                        */
                         mService.writeRXCharacteristic(buffer);
                     }
                 } catch (IOException e) { //remote disconnect
@@ -368,12 +369,14 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                      } catch (IOException e) {
                          e.printStackTrace();
                      }
+                     /*
                      runOnUiThread(new Runnable() {
                          public void run() {
                              listAdapter.add("BLE->TCP");
                              messageListView.smoothScrollToPosition(listAdapter.getCount() - 1);
                          }
                      });
+                     */
                  }
              }
            //*********************//

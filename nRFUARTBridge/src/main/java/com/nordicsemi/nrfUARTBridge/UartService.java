@@ -41,6 +41,7 @@ import android.util.Log;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Semaphore;
 
 /**
  * Service for managing connection and data communication with a GATT server hosted on a
@@ -80,8 +81,10 @@ public class UartService extends Service {
     public static final UUID RX_SERVICE_UUID = UUID.fromString("6e400001-b5a3-f393-e0a9-e50e24dcca9e");
     public static final UUID RX_CHAR_UUID = UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e");
     public static final UUID TX_CHAR_UUID = UUID.fromString("6e400003-b5a3-f393-e0a9-e50e24dcca9e");
-    
-   
+
+    private final Semaphore writeSema = new Semaphore(1);
+    int writeStatus;
+
     // Implements callback methods for GATT events that the app cares about.  For example,
     // connection change and services discovered.
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
@@ -124,6 +127,14 @@ public class UartService extends Service {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
             }
+        }
+
+        @Override
+        public void onCharacteristicWrite(BluetoothGatt gatt,
+                                         BluetoothGattCharacteristic characteristic,
+                                         int status) {
+            writeStatus = status;
+            writeSema.release();
         }
 
         @Override
@@ -326,27 +337,41 @@ public class UartService extends Service {
     	
     }
     
-    public void writeRXCharacteristic(byte[] value)
+    public boolean writeRXCharacteristic(byte[] value)
     {
-    
-    	
     	BluetoothGattService RxService = mBluetoothGatt.getService(RX_SERVICE_UUID);
     	showMessage("mBluetoothGatt null"+ mBluetoothGatt);
     	if (RxService == null) {
             showMessage("Rx service not found!");
             broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_UART);
-            return;
+            return false;
         }
     	BluetoothGattCharacteristic RxChar = RxService.getCharacteristic(RX_CHAR_UUID);
         if (RxChar == null) {
             showMessage("Rx charateristic not found!");
             broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_UART);
-            return;
+            return false;
+        }
+
+        try {
+            writeSema.acquire();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
         RxChar.setValue(value);
+        writeStatus = -1;
     	boolean status = mBluetoothGatt.writeCharacteristic(RxChar);
-    	
-        Log.d(TAG, "write TXchar - status=" + status);  
+    	if (!status)
+    	    return false;
+
+        try {
+            writeSema.acquire();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        writeSema.release();
+        //Log.d(TAG, "write TXchar - status=" + status);
+        return (writeStatus==BluetoothGatt.GATT_SUCCESS);
     }
     
     private void showMessage(String msg) {
